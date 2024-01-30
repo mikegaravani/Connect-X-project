@@ -104,16 +104,21 @@ public class SouthPasadena implements CXPlayer {
             int myTotalCells = 0;
             int yourTotalCells = 0;
 
-            // If the row we're considering is completely filled, we can skip it (continue command).
+            // Checking if we can skip the current row
             int nonEmptyCells = 0;
             for (int k=0; k<columnsNumber; k++){
                 if (B.cellState(i, k) != CXCellState.FREE){
                     nonEmptyCells++;
                 }
             }
-            if (nonEmptyCells == columnsNumber){
-                iter = 0;
+            if (nonEmptyCells == 0){
+                // If the row we're considering is completely empty, we can skip it.
                 continue;
+            }
+            else if (nonEmptyCells == columnsNumber){
+                // If the row we're considering is completely filled, it won't affect the row score and we can break out of the loop.
+                // This is because we can assume that all the rows below the current one will also be full. 
+                break;
             }
 
             while (iter + tokensToConnect <= columnsNumber){
@@ -126,11 +131,11 @@ public class SouthPasadena implements CXPlayer {
                     }
                     // Nothing happens if the cell is empty
                 }
-                if (myTotalCells == 0 && yourTotalCells > 0){
-                    score = score - yourTotalCells/tokensToConnect * MULTIPLIER;
+                if (myTotalCells > 0 && yourTotalCells == 0){
+                    score = score + ((int)Math.pow(myTotalCells, 2)/tokensToConnect) * MULTIPLIER;
                 }
-                else if (myTotalCells > 0 && yourTotalCells == 0){
-                    score = score + myTotalCells/tokensToConnect * MULTIPLIER;
+                else if (myTotalCells == 0 && yourTotalCells > 0){
+                    score = score - ((int)Math.pow(yourTotalCells, 2)/tokensToConnect) * MULTIPLIER;
                 }
                 myTotalCells = 0;
                 yourTotalCells = 0;
@@ -139,10 +144,21 @@ public class SouthPasadena implements CXPlayer {
         }
 
         // COLUMN EVAL
-        for (int j=0; j<columnsNumber; j++){
+        for (int j=0; j<B.getAvailableColumns().length; j++){
 
             // Variable that iterates the current column, top to bottom
-            int topDownIter = rowsNumber - 1;
+            int topDownIter = 0;
+            /*
+             * 
+             *      0   1   2   3   4   columns
+             * 0   tpdwn
+             * 1    |
+             * 2    |
+             * 3    v
+             * 4
+             * rows
+             * 
+             */
 
             // Counts how many tokens from the same player there are at the top of the column
             int count = 0;
@@ -154,17 +170,20 @@ public class SouthPasadena implements CXPlayer {
             boolean change = false;
             
 
-            // Going down the i-th column with 'topDownIter' until a cell is not empty
-            while (topDownIter >= 0 && (B.cellState(topDownIter, j) == CXCellState.FREE)){
-                topDownIter--;
+            // Going down the j-th non-full column with 'topDownIter' until a cell is not empty
+            while (topDownIter < rowsNumber && (B.cellState(topDownIter, B.getAvailableColumns()[j]) == CXCellState.FREE)){
+                topDownIter++;
             }
 
-            while (topDownIter >= 0 && change == false){
+            // The number of empty cells in the column
+            int emptyCellsAbove = topDownIter;
+
+            while (topDownIter < rowsNumber && change == false){
 
                 // First non empty cell found
                 if (count == 0){
                     count++;
-                    if (B.cellState(topDownIter, j) == myCell){
+                    if (B.cellState(topDownIter, B.getAvailableColumns()[j]) == myCell){
                         isMyColumn = true;
                     }
                     else{
@@ -173,12 +192,12 @@ public class SouthPasadena implements CXPlayer {
                 }
 
                 // The cell has the same color as the cells above it
-                else if (count > 0 && isMyColumn == true && B.cellState(topDownIter, j) == myCell){
+                else if (count > 0 && isMyColumn == true && B.cellState(topDownIter, B.getAvailableColumns()[j]) == myCell){
                     count++;
                 }
 
                 // The cell has the same color as the cells above it
-                else if (count > 0 && isMyColumn == false && B.cellState(topDownIter, j) == yourCell){
+                else if (count > 0 && isMyColumn == false && B.cellState(topDownIter, B.getAvailableColumns()[j]) == yourCell){
                     count++;
                 }
 
@@ -187,17 +206,22 @@ public class SouthPasadena implements CXPlayer {
                     change = true;
                 }
 
-                topDownIter--;
+                topDownIter++;
             }
 
-            if (count > 0 && isMyColumn){
-                score = score + count/tokensToConnect * MULTIPLIER_2;
+            if (count > 0 && isMyColumn && (emptyCellsAbove + count >= tokensToConnect)){
+                score = score + (int)Math.pow(count, 2)/tokensToConnect * MULTIPLIER_2;
             }
-            else if (count > 0 && !isMyColumn){
-                score = score - count/tokensToConnect * MULTIPLIER_2;
+            else if (count > 0 && !isMyColumn && (emptyCellsAbove + count >= tokensToConnect)){
+                score = score - (int)Math.pow(count, 2)/tokensToConnect * MULTIPLIER_2;
             }
+
+            // TODO IN REPORT: explain that normalizing by tokenstoconnect has virtually no effect
 
         }
+
+        // DIAGONAL EVAL
+
 
         return score;
 
