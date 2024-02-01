@@ -8,6 +8,9 @@ import connectx.CXCellState;
 import connectx.CXGameState;
 import connectx.CXPlayer;
 
+/**
+ * Mike Garavani's Connect X software player
+ */
 public class SouthPasadena implements CXPlayer {
 
     private Random rand;
@@ -15,10 +18,13 @@ public class SouthPasadena implements CXPlayer {
     // CONSTANTS
 
     // Constant used in the row heuristic score evaluation
-    public static final int MULTIPLIER = 10;
+    public static final int MULTIPLIER_1 = 10;
 
     // Constant used in the column heuristic score evaluation
     public static final int MULTIPLIER_2 = 6;
+
+    // Constant used in the diagonal heuristic score evaluation
+    public static final int MULTIPLIER_3 = 8;
 
     private int rowsNumber;
     private int columnsNumber;
@@ -55,6 +61,14 @@ public class SouthPasadena implements CXPlayer {
 		return L[rand.nextInt(L.length)];
     }
 
+    /**
+     * Determines the heuristic score of the game in the current position, by returning
+     * the outcome of the game (if the game is in a final state),
+     * or by calling a helper function that determines the score in a non-terminal state.
+     * 
+     * @param B - CXBoard object representing the current state of the game
+     * @return The heuristic score in the current state of the game
+     */
     private int heuristicScore(CXBoard B){
 
         // Terminal states evaluation
@@ -78,7 +92,9 @@ public class SouthPasadena implements CXPlayer {
     }
 
     /**
-     * Function called by heuristicScore if the current state of the game is not terminal
+     * Function called by heuristicScore if the current state of the game is not terminal.
+     * The score in the current game position is determined by assessing the potential 
+     * row, column and diagonal winning opportunities for each player.
      * <p>
      * 
      * Note:
@@ -89,7 +105,7 @@ public class SouthPasadena implements CXPlayer {
      * 
      * @param B - CXBoard object representing the current state of the game
      * 
-     * @return The heuristic score in the current state of the game
+     * @return The heuristic score in the current state of the game, which is non-terminal
      * 
      */
     private int nonTerminalHeuristicScore(CXBoard B){
@@ -97,7 +113,7 @@ public class SouthPasadena implements CXPlayer {
         // Initializing the heuristic score
         int score = 0;
 
-        // ROW EVAL
+        // HORIZONTAL SCORE
         for (int i=0; i<rowsNumber; i++){
 
             int iter = 0;
@@ -117,7 +133,7 @@ public class SouthPasadena implements CXPlayer {
             }
             else if (nonEmptyCells == columnsNumber){
                 // If the row we're considering is completely filled, it won't affect the row score and we can break out of the loop.
-                // This is because we can assume that all the rows below the current one will also be full. 
+                // This is because we can assume that all the rows below the current one are also full. 
                 break;
             }
 
@@ -132,10 +148,10 @@ public class SouthPasadena implements CXPlayer {
                     // Nothing happens if the cell is empty
                 }
                 if (myTotalCells > 0 && yourTotalCells == 0){
-                    score = score + ((int)Math.pow(myTotalCells, 2)/tokensToConnect) * MULTIPLIER;
+                    score = score + ((int)Math.pow(myTotalCells, 2)/tokensToConnect) * MULTIPLIER_1;
                 }
                 else if (myTotalCells == 0 && yourTotalCells > 0){
-                    score = score - ((int)Math.pow(yourTotalCells, 2)/tokensToConnect) * MULTIPLIER;
+                    score = score - ((int)Math.pow(yourTotalCells, 2)/tokensToConnect) * MULTIPLIER_1;
                 }
                 myTotalCells = 0;
                 yourTotalCells = 0;
@@ -143,7 +159,7 @@ public class SouthPasadena implements CXPlayer {
             }
         }
 
-        // COLUMN EVAL
+        // VERTICAL SCORE
         for (int j=0; j<B.getAvailableColumns().length; j++){
 
             // Variable that iterates the current column, top to bottom
@@ -163,7 +179,7 @@ public class SouthPasadena implements CXPlayer {
             // Counts how many tokens from the same player there are at the top of the column
             int count = 0;
 
-            // Establishes if the top tokens of the column are SouthPasadena's or the opponent's
+            // Establishes if the top token of the column is SouthPasadena's or the opponent's
             boolean isMyColumn = true;
 
             // Marks the first token top to bottom that is the other player's, stopping the loop
@@ -217,10 +233,81 @@ public class SouthPasadena implements CXPlayer {
             }
 
             // TODO IN REPORT: explain that normalizing by tokenstoconnect has virtually no effect
+            // TODO: possibly remove normalizations by tokenstoconnect !!!!!!
 
         }
 
-        // DIAGONAL EVAL
+        // DIAGONAL SCORE
+        
+        // Descending diagonal
+        for (int i=0; i <= rowsNumber - tokensToConnect; i++){
+            for (int j=0; j <= (columnsNumber - tokensToConnect); j++){
+
+                int iter = tokensToConnect;
+                int myTotalCells = 0;
+                int yourTotalCells = 0;
+                int startingRow = i;
+                int startingColumn = j;
+
+                while (iter > 0){
+
+                    if (B.cellState(startingRow, startingColumn) == myCell){
+                        myTotalCells++;
+                    }
+                    else if (B.cellState(startingRow, startingColumn) == yourCell){
+                        yourTotalCells++;
+                    }
+                    // Nothing happens if the cell is empty
+
+                    startingRow++;
+                    startingColumn++;
+                    iter--;
+                }
+
+                if (myTotalCells > 0 && yourTotalCells == 0){
+                    score = score + ((int)Math.pow(myTotalCells, 2)/tokensToConnect) * MULTIPLIER_3;
+                }
+                else if (myTotalCells == 0 && yourTotalCells > 0){
+                    score = score - ((int)Math.pow(yourTotalCells, 2)/tokensToConnect) * MULTIPLIER_3;
+                }
+
+            }
+        }
+
+        // Ascending diagonal
+        for (int i=0; i <= rowsNumber - tokensToConnect; i++){
+            for (int j = tokensToConnect - 1; j < columnsNumber; j++){
+
+                int iter = tokensToConnect;
+                int myTotalCells = 0;
+                int yourTotalCells = 0;
+                int startingRow = i;
+                int startingColumn = j;
+
+                while (iter > 0){
+
+                    if (B.cellState(startingRow, startingColumn) == myCell){
+                        myTotalCells++;
+                    }
+                    else if (B.cellState(startingRow, startingColumn) == yourCell){
+                        yourTotalCells++;
+                    }
+                    // Nothing happens if the cell is empty
+
+                    startingRow++;
+                    startingColumn--;
+                    iter--;
+                }
+
+                if (myTotalCells > 0 && yourTotalCells == 0){
+                    score = score + ((int)Math.pow(myTotalCells, 2)/tokensToConnect) * MULTIPLIER_3;
+                }
+                else if (myTotalCells == 0 && yourTotalCells > 0){
+                    score = score - ((int)Math.pow(yourTotalCells, 2)/tokensToConnect) * MULTIPLIER_3;
+                }
+
+            }
+        }
 
 
         return score;
