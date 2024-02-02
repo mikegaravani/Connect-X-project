@@ -36,6 +36,11 @@ public class SouthPasadena implements CXPlayer {
     private CXCellState myCell;
     private CXCellState yourCell;
 
+    // Dealing with time
+    private long startingTime;
+    private long timeConstraintMillis; // TODO maybe int and keep it in seconds?????????????????
+
+
     /* Default empty constructor */
 	public SouthPasadena() {
 	}
@@ -54,12 +59,83 @@ public class SouthPasadena implements CXPlayer {
         myCell = first ? CXCellState.P1 : CXCellState.P2;
         yourCell = first ? CXCellState.P2 : CXCellState.P1;
 
+        timeConstraintMillis = timeout_in_secs * 1000;
     }
 
+    /**
+     * Checks if the time to select a column is running out, that is if more than
+     * 99 percent of it has passed.
+     * 
+     * @return Boolean
+     */
+    private boolean isTimeRunningOut(){
+        long elapsedTimeMillis = System.currentTimeMillis() - startingTime;
+        // TODO keep it 99% ?? sus
+        return (elapsedTimeMillis >= 0.99 * timeConstraintMillis);
+    }
+
+
+
     public int selectColumn(CXBoard B){
+
+        // If the board is empty, start in the center
+        if (B.numOfMarkedCells() == 0){
+            return columnsNumber/2;
+        }
+
+
+
+        // TODO fix this tomfoolery
+        /*
+        // RANDOM DEFAULT COLUMN
         Integer[] L = B.getAvailableColumns();
 		return L[rand.nextInt(L.length)];
+        */
+        return 0;
     }
+
+    private int alphaBetaMinimax(CXBoard B, int alpha, int beta, int depth, boolean isMaximizing){
+
+        if (depth == 0 || B.gameState() != CXGameState.OPEN || isTimeRunningOut()){
+            return heuristicScore(B);
+        }
+
+        if (isMaximizing){
+            int value = Integer.MIN_VALUE + 100;
+            Integer[] avColumns = B.getAvailableColumns();
+            for (int i=0; i<avColumns.length; i++){
+                B.markColumn(avColumns[i]);
+                // Note that in the following call to alphaBetaMinimax the CXBoard B has been updated
+                value = Math.max(value, alphaBetaMinimax(B, alpha, beta, depth-1, !isMaximizing));
+                B.unmarkColumn();
+                if (value >= beta){
+                    // break BETA !!
+                    break;
+                }
+                alpha = Math.max(alpha, value);
+            }
+            return value;
+        }
+
+        else{
+            int value = Integer.MAX_VALUE - 100;
+            Integer[] avColumns = B.getAvailableColumns();
+            for (int i=0; i<avColumns.length; i++){
+                B.markColumn(avColumns[i]);
+                // Note that in the following call to alphaBeta the CXBoard B has been updated
+                value = Math.min(value, alphaBetaMinimax(B, alpha, beta, depth-1, isMaximizing));
+                B.unmarkColumn();
+                if (value <= alpha){
+                    // break ALPHA !!
+                    break;
+                }
+                beta = Math.min(beta, value);
+            }
+            return value;
+        }
+    }
+
+
 
     /**
      * Determines the heuristic score of the game in the current position, by returning
@@ -74,11 +150,11 @@ public class SouthPasadena implements CXPlayer {
         // Terminal states evaluation
         if (B.gameState() == myWin){
             // SouthPasadena has won
-            return Integer.MAX_VALUE;
+            return Integer.MAX_VALUE - 100;
         }
         else if (B.gameState() == yourWin){
             // The opponent has won
-            return Integer.MIN_VALUE;
+            return Integer.MIN_VALUE + 100;
         }
         else if (B.gameState() == CXGameState.DRAW){
             // The game is a draw
