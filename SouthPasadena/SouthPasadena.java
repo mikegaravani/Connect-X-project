@@ -3,7 +3,6 @@ package connectx.SouthPasadena;
 import java.util.Random;
 
 import connectx.CXBoard;
-import connectx.CXCell;
 import connectx.CXCellState;
 import connectx.CXGameState;
 import connectx.CXPlayer;
@@ -31,7 +30,7 @@ public class SouthPasadena implements CXPlayer {
     private int tokensToConnect;
 
     private CXGameState myWin;
-	private CXGameState yourWin;
+    private CXGameState yourWin;
 
     private CXCellState myCell;
     private CXCellState yourCell;
@@ -42,7 +41,7 @@ public class SouthPasadena implements CXPlayer {
 
 
     /* Default empty constructor */
-	public SouthPasadena() {
+    public SouthPasadena() {
 	}
 
     public void initPlayer(int M, int N, int X, boolean first, int timeout_in_secs){
@@ -54,7 +53,7 @@ public class SouthPasadena implements CXPlayer {
         tokensToConnect = X;
 
         myWin   = first ? CXGameState.WINP1 : CXGameState.WINP2;
-		yourWin = first ? CXGameState.WINP2 : CXGameState.WINP1;
+        yourWin = first ? CXGameState.WINP2 : CXGameState.WINP1;
 
         myCell = first ? CXCellState.P1 : CXCellState.P2;
         yourCell = first ? CXCellState.P2 : CXCellState.P1;
@@ -83,15 +82,30 @@ public class SouthPasadena implements CXPlayer {
             return columnsNumber/2;
         }
 
+        // Initializing Minimax execution
+        Integer[] avColumns = B.getAvailableColumns();
+        int bestColumn = avColumns[0];
+        int bestScore = Integer.MIN_VALUE;
+        int alpha = Integer.MIN_VALUE;
+        int beta = Integer.MAX_VALUE;
 
+        // DEPTH
+        int depth = 10000; // TODO whats the right depth ????
 
-        // TODO fix this tomfoolery
-        /*
-        // RANDOM DEFAULT COLUMN
-        Integer[] L = B.getAvailableColumns();
-		return L[rand.nextInt(L.length)];
-        */
-        return 0;
+        for (int i=0; i<avColumns.length; i++){
+
+            B.markColumn(avColumns[i]);
+            int currentScore = alphaBetaMinimax(B, alpha, beta, depth, true);
+            B.unmarkColumn();
+
+            if (bestScore < currentScore){
+                bestScore = currentScore;
+                bestColumn = avColumns[i];
+            }
+        }
+
+        return bestColumn;
+
     }
 
     private int alphaBetaMinimax(CXBoard B, int alpha, int beta, int depth, boolean isMaximizing){
@@ -101,7 +115,7 @@ public class SouthPasadena implements CXPlayer {
         }
 
         if (isMaximizing){
-            int value = Integer.MIN_VALUE + 100;
+            int value = Integer.MIN_VALUE;
             Integer[] avColumns = B.getAvailableColumns();
             for (int i=0; i<avColumns.length; i++){
                 B.markColumn(avColumns[i]);
@@ -118,11 +132,11 @@ public class SouthPasadena implements CXPlayer {
         }
 
         else{
-            int value = Integer.MAX_VALUE - 100;
+            int value = Integer.MAX_VALUE;
             Integer[] avColumns = B.getAvailableColumns();
             for (int i=0; i<avColumns.length; i++){
                 B.markColumn(avColumns[i]);
-                // Note that in the following call to alphaBeta the CXBoard B has been updated
+                // Note that in the following call to alphaBetaMinimax the CXBoard B has been updated
                 value = Math.min(value, alphaBetaMinimax(B, alpha, beta, depth-1, isMaximizing));
                 B.unmarkColumn();
                 if (value <= alpha){
@@ -150,11 +164,11 @@ public class SouthPasadena implements CXPlayer {
         // Terminal states evaluation
         if (B.gameState() == myWin){
             // SouthPasadena has won
-            return Integer.MAX_VALUE - 100;
+            return Integer.MAX_VALUE;
         }
         else if (B.gameState() == yourWin){
             // The opponent has won
-            return Integer.MIN_VALUE + 100;
+            return Integer.MIN_VALUE;
         }
         else if (B.gameState() == CXGameState.DRAW){
             // The game is a draw
