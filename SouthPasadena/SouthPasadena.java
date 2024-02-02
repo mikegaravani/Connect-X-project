@@ -37,7 +37,7 @@ public class SouthPasadena implements CXPlayer {
 
     // Dealing with time
     private long startingTime;
-    private long timeConstraintMillis; // TODO maybe int and keep it in seconds?????????????????
+    private long timeConstraintMillis;
 
 
     /* Default empty constructor */
@@ -45,6 +45,7 @@ public class SouthPasadena implements CXPlayer {
 	}
 
     public void initPlayer(int M, int N, int X, boolean first, int timeout_in_secs){
+
         // INITIALIZE PLAYER
         rand = new Random(System.currentTimeMillis());
 
@@ -68,14 +69,15 @@ public class SouthPasadena implements CXPlayer {
      * @return Boolean
      */
     private boolean isTimeRunningOut(){
+
         long elapsedTimeMillis = System.currentTimeMillis() - startingTime;
-        // TODO keep it 99% ?? sus
-        return (elapsedTimeMillis >= 0.99 * timeConstraintMillis);
+        return (elapsedTimeMillis >= 0.98 * timeConstraintMillis);
+
     }
 
-
-
     public int selectColumn(CXBoard B){
+
+        startingTime = System.currentTimeMillis();
 
         // If the board is empty, start in the center
         if (B.numOfMarkedCells() == 0){
@@ -90,7 +92,7 @@ public class SouthPasadena implements CXPlayer {
         int beta = Integer.MAX_VALUE;
 
         // DEPTH
-        int depth = 10000; // TODO whats the right depth ????
+        int depth = 5; // TODO whats the right depth ????
 
         for (int i=0; i<avColumns.length; i++){
 
@@ -98,7 +100,7 @@ public class SouthPasadena implements CXPlayer {
             int currentScore = alphaBetaMinimax(B, alpha, beta, depth, true);
             B.unmarkColumn();
 
-            if (bestScore < currentScore){
+            if (currentScore > bestScore){
                 bestScore = currentScore;
                 bestColumn = avColumns[i];
             }
@@ -122,7 +124,7 @@ public class SouthPasadena implements CXPlayer {
                 // Note that in the following call to alphaBetaMinimax the CXBoard B has been updated
                 value = Math.max(value, alphaBetaMinimax(B, alpha, beta, depth-1, !isMaximizing));
                 B.unmarkColumn();
-                if (value >= beta){
+                if (value > beta){
                     // break BETA !!
                     break;
                 }
@@ -139,7 +141,7 @@ public class SouthPasadena implements CXPlayer {
                 // Note that in the following call to alphaBetaMinimax the CXBoard B has been updated
                 value = Math.min(value, alphaBetaMinimax(B, alpha, beta, depth-1, isMaximizing));
                 B.unmarkColumn();
-                if (value <= alpha){
+                if (value < alpha){
                     // break ALPHA !!
                     break;
                 }
