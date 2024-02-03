@@ -17,13 +17,13 @@ public class SouthPasadena implements CXPlayer {
     // CONSTANTS
 
     // Constant used in the row heuristic score evaluation
-    public static final int MULTIPLIER_1 = 10;
+    public static final int MULTIPLIER_1 = 1;
 
     // Constant used in the column heuristic score evaluation
-    public static final int MULTIPLIER_2 = 6;
+    public static final int MULTIPLIER_2 = 1;
 
     // Constant used in the diagonal heuristic score evaluation
-    public static final int MULTIPLIER_3 = 8;
+    public static final int MULTIPLIER_3 = 1;
 
     private int rowsNumber;
     private int columnsNumber;
@@ -88,16 +88,40 @@ public class SouthPasadena implements CXPlayer {
         Integer[] avColumns = B.getAvailableColumns();
         int bestColumn = avColumns[0];
         int bestScore = Integer.MIN_VALUE;
-        int alpha = Integer.MIN_VALUE;
-        int beta = Integer.MAX_VALUE;
+
+        // TODO alpha and beta inside or outside the loop???????
 
         // DEPTH
         int depth = 5; // TODO whats the right depth ????
 
+        /*
+         * This segment of code iterates through all possible moves that SouthPasadena can make on the game board.
+         * 
+         * For each potential move:
+         * 
+         * 1. The move is temporarily played on the board.
+         * 
+         * 2. To assess the quality of the move, we invoke the 'alphaBetaMinimax' function.
+         * 
+         * Note that the 'isMaximizing' parameter set to false. This is because, at this stage,
+         * we're evaluating the game from the perspective of SouthPasadena's opponent.
+         * The move has already been made by SouthPasadena, so we're now interested in how the opponent
+         * would respond to minimize SouthPasadena's advantage. Essentially, we're trying to predict
+         * the opponent's best countermove to the one we're considering.
+         * 
+         * 3. After evaluating the move, it's "unplayed" by reverting the board to its previous state.
+         * 
+         * The algorithm then picks the move with the highest score.
+         * 
+         *  
+         */
         for (int i=0; i<avColumns.length; i++){
 
+            int alpha = Integer.MIN_VALUE;
+            int beta = Integer.MAX_VALUE;
+
             B.markColumn(avColumns[i]);
-            int currentScore = alphaBetaMinimax(B, alpha, beta, depth, true);
+            int currentScore = alphaBetaMinimax(B, alpha, beta, depth, false);
             B.unmarkColumn();
 
             if (currentScore > bestScore){
@@ -110,6 +134,14 @@ public class SouthPasadena implements CXPlayer {
 
     }
 
+    /**
+     * @param B
+     * @param alpha
+     * @param beta
+     * @param depth
+     * @param isMaximizing
+     * @return The score in the current game State
+     */
     private int alphaBetaMinimax(CXBoard B, int alpha, int beta, int depth, boolean isMaximizing){
 
         if (depth == 0 || B.gameState() != CXGameState.OPEN || isTimeRunningOut()){
@@ -122,7 +154,7 @@ public class SouthPasadena implements CXPlayer {
             for (int i=0; i<avColumns.length; i++){
                 B.markColumn(avColumns[i]);
                 // Note that in the following call to alphaBetaMinimax the CXBoard B has been updated
-                value = Math.max(value, alphaBetaMinimax(B, alpha, beta, depth-1, !isMaximizing));
+                value = Math.max(value, alphaBetaMinimax(B, alpha, beta, depth-1, false));
                 B.unmarkColumn();
                 if (value > beta){
                     // break BETA !!
@@ -139,7 +171,7 @@ public class SouthPasadena implements CXPlayer {
             for (int i=0; i<avColumns.length; i++){
                 B.markColumn(avColumns[i]);
                 // Note that in the following call to alphaBetaMinimax the CXBoard B has been updated
-                value = Math.min(value, alphaBetaMinimax(B, alpha, beta, depth-1, isMaximizing));
+                value = Math.min(value, alphaBetaMinimax(B, alpha, beta, depth-1, true));
                 B.unmarkColumn();
                 if (value < alpha){
                     // break ALPHA !!
@@ -201,7 +233,7 @@ public class SouthPasadena implements CXPlayer {
      * 
      */
     private int nonTerminalHeuristicScore(CXBoard B){
-
+        
         // Initializing the heuristic score
         int score = 0;
 
@@ -240,10 +272,10 @@ public class SouthPasadena implements CXPlayer {
                     // Nothing happens if the cell is empty
                 }
                 if (myTotalCells > 0 && yourTotalCells == 0){
-                    score = score + ((int)Math.pow(myTotalCells, 2)/tokensToConnect) * MULTIPLIER_1;
+                    score = score + ((int)Math.pow(myTotalCells, 2)) * MULTIPLIER_1;
                 }
                 else if (myTotalCells == 0 && yourTotalCells > 0){
-                    score = score - ((int)Math.pow(yourTotalCells, 2)/tokensToConnect) * MULTIPLIER_1;
+                    score = score - ((int)Math.pow(yourTotalCells, 2)) * MULTIPLIER_1;
                 }
                 myTotalCells = 0;
                 yourTotalCells = 0;
@@ -318,14 +350,11 @@ public class SouthPasadena implements CXPlayer {
             }
 
             if (count > 0 && isMyColumn && (emptyCellsAbove + count >= tokensToConnect)){
-                score = score + (int)Math.pow(count, 2)/tokensToConnect * MULTIPLIER_2;
+                score = score + (int)Math.pow(count, 2) * MULTIPLIER_2;
             }
             else if (count > 0 && !isMyColumn && (emptyCellsAbove + count >= tokensToConnect)){
-                score = score - (int)Math.pow(count, 2)/tokensToConnect * MULTIPLIER_2;
+                score = score - (int)Math.pow(count, 2) * MULTIPLIER_2;
             }
-
-            // TODO IN REPORT: explain that normalizing by tokenstoconnect has virtually no effect
-            // TODO: possibly remove normalizations by tokenstoconnect !!!!!!
 
         }
 
@@ -357,10 +386,10 @@ public class SouthPasadena implements CXPlayer {
                 }
 
                 if (myTotalCells > 0 && yourTotalCells == 0){
-                    score = score + ((int)Math.pow(myTotalCells, 2)/tokensToConnect) * MULTIPLIER_3;
+                    score = score + ((int)Math.pow(myTotalCells, 2)) * MULTIPLIER_3;
                 }
                 else if (myTotalCells == 0 && yourTotalCells > 0){
-                    score = score - ((int)Math.pow(yourTotalCells, 2)/tokensToConnect) * MULTIPLIER_3;
+                    score = score - ((int)Math.pow(yourTotalCells, 2)) * MULTIPLIER_3;
                 }
 
             }
@@ -392,10 +421,10 @@ public class SouthPasadena implements CXPlayer {
                 }
 
                 if (myTotalCells > 0 && yourTotalCells == 0){
-                    score = score + ((int)Math.pow(myTotalCells, 2)/tokensToConnect) * MULTIPLIER_3;
+                    score = score + ((int)Math.pow(myTotalCells, 2)) * MULTIPLIER_3;
                 }
                 else if (myTotalCells == 0 && yourTotalCells > 0){
-                    score = score - ((int)Math.pow(yourTotalCells, 2)/tokensToConnect) * MULTIPLIER_3;
+                    score = score - ((int)Math.pow(yourTotalCells, 2)) * MULTIPLIER_3;
                 }
 
             }
