@@ -85,11 +85,10 @@ public class SouthPasadena implements CXPlayer {
         }
 
         // Initializing Minimax execution
-        Integer[] avColumns = B.getAvailableColumns();
-        int bestColumn = avColumns[0];
+        Integer[] columnsInOrder = orderColumns();
+        // We set the first available column as the best one just for initialization purposes
+        int bestColumn = B.getAvailableColumns()[0];
         int bestScore = Integer.MIN_VALUE;
-
-        // TODO alpha and beta inside or outside the loop???????
 
         // DEPTH
         int depth = 5; // TODO whats the right depth ????
@@ -115,18 +114,22 @@ public class SouthPasadena implements CXPlayer {
          * 
          *  
          */
-        for (int i=0; i<avColumns.length; i++){
+        for (int i=0; i<columnsNumber; i++){
 
-            int alpha = Integer.MIN_VALUE;
-            int beta = Integer.MAX_VALUE;
+            if (!B.fullColumn(columnsInOrder[i])){
 
-            B.markColumn(avColumns[i]);
-            int currentScore = alphaBetaMinimax(B, alpha, beta, depth, false);
-            B.unmarkColumn();
+                int alpha = Integer.MIN_VALUE;
+                int beta = Integer.MAX_VALUE;
 
-            if (currentScore > bestScore){
-                bestScore = currentScore;
-                bestColumn = avColumns[i];
+                B.markColumn(columnsInOrder[i]);
+                int currentScore = alphaBetaMinimax(B, alpha, beta, depth, false);
+                B.unmarkColumn();
+
+                if (currentScore > bestScore){
+                    bestScore = currentScore;
+                    bestColumn = columnsInOrder[i];
+                }
+
             }
         }
 
@@ -150,37 +153,83 @@ public class SouthPasadena implements CXPlayer {
 
         if (isMaximizing){
             int value = Integer.MIN_VALUE;
-            Integer[] avColumns = B.getAvailableColumns();
-            for (int i=0; i<avColumns.length; i++){
-                B.markColumn(avColumns[i]);
-                // Note that in the following call to alphaBetaMinimax the CXBoard B has been updated
-                value = Math.max(value, alphaBetaMinimax(B, alpha, beta, depth-1, false));
-                B.unmarkColumn();
-                if (value > beta){
-                    // break BETA !!
-                    break;
+            Integer[] columnsInOrder = orderColumns();
+            for (int i=0; i<columnsNumber; i++){
+                if (!B.fullColumn(columnsInOrder[i])){
+                    B.markColumn(columnsInOrder[i]);
+                    // Note that in the following call to alphaBetaMinimax the CXBoard B has been updated
+                    value = Math.max(value, alphaBetaMinimax(B, alpha, beta, depth-1, false));
+                    B.unmarkColumn();
+                    if (value > beta){
+                        // break BETA !!
+                        break;
+                    }
+                    alpha = Math.max(alpha, value);
                 }
-                alpha = Math.max(alpha, value);
             }
             return value;
         }
 
         else{
             int value = Integer.MAX_VALUE;
-            Integer[] avColumns = B.getAvailableColumns();
-            for (int i=0; i<avColumns.length; i++){
-                B.markColumn(avColumns[i]);
-                // Note that in the following call to alphaBetaMinimax the CXBoard B has been updated
-                value = Math.min(value, alphaBetaMinimax(B, alpha, beta, depth-1, true));
-                B.unmarkColumn();
-                if (value < alpha){
-                    // break ALPHA !!
-                    break;
+            Integer[] columnsInOrder = orderColumns();
+            for (int i=0; i<columnsNumber; i++){
+                if (!B.fullColumn(columnsInOrder[i])){
+                    B.markColumn(columnsInOrder[i]);
+                    // Note that in the following call to alphaBetaMinimax the CXBoard B has been updated
+                    value = Math.min(value, alphaBetaMinimax(B, alpha, beta, depth-1, true));
+                    B.unmarkColumn();
+                    if (value < alpha){
+                        // break ALPHA !!
+                        break;
+                    }
+                    beta = Math.min(beta, value);
                 }
-                beta = Math.min(beta, value);
             }
             return value;
         }
+    }
+
+    /**
+     * Orders the columns based on how far from the center of the board they are.
+     * Columns will then be called in this order by the Minimax algorithms.
+     * This is because tokens in columns near the center of the board tend to have more opportunities.
+     * 
+     * @param B
+     * @return Array of the order the columns will be explored in
+     */
+    private Integer[] orderColumns(){
+        
+        Integer[] columnPriorities = new Integer[columnsNumber];
+        int midPoint = columnsNumber/2;
+        int iter = 0;
+        int lowMidpoint = 0;
+
+        columnPriorities[iter] = midPoint;
+        iter = iter + 1;
+
+        if (columnsNumber % 2 == 0){
+            // there are two central columns
+            lowMidpoint = midPoint - 1;
+            columnPriorities[iter] = lowMidpoint;
+            iter = iter + 1;
+        }
+        else{
+            lowMidpoint = midPoint;
+        }
+
+        int factor = 1;
+        while (iter < columnsNumber){
+            columnPriorities[iter] = lowMidpoint - factor;
+            iter = iter + 1;
+            columnPriorities[iter] = midPoint + factor;
+            iter = iter + 1;
+
+            factor = factor + 1;
+        }
+
+        return columnPriorities;
+
     }
 
 
@@ -233,7 +282,7 @@ public class SouthPasadena implements CXPlayer {
      * 
      */
     private int nonTerminalHeuristicScore(CXBoard B){
-        
+
         // Initializing the heuristic score
         int score = 0;
 
