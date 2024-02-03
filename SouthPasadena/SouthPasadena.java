@@ -91,7 +91,7 @@ public class SouthPasadena implements CXPlayer {
         int bestScore = Integer.MIN_VALUE;
 
         // DEPTH
-        int depth = 5; // TODO whats the right depth ????
+        int depth = 1;
 
         /*
          * This segment of code iterates through all possible moves that SouthPasadena can make on the game board.
@@ -114,23 +114,27 @@ public class SouthPasadena implements CXPlayer {
          * 
          *  
          */
-        for (int i=0; i<columnsNumber; i++){
+        while (!isTimeRunningOut()){
+            for (int i=0; i<columnsNumber; i++){
+                if (!B.fullColumn(columnsInOrder[i])){
 
-            if (!B.fullColumn(columnsInOrder[i])){
+                    int alpha = Integer.MIN_VALUE;
+                    int beta = Integer.MAX_VALUE;
 
-                int alpha = Integer.MIN_VALUE;
-                int beta = Integer.MAX_VALUE;
+                    B.markColumn(columnsInOrder[i]);
+                    int currentScore = alphaBetaMinimax(B, alpha, beta, depth, false);
+                    B.unmarkColumn();
 
-                B.markColumn(columnsInOrder[i]);
-                int currentScore = alphaBetaMinimax(B, alpha, beta, depth, false);
-                B.unmarkColumn();
+                    if (currentScore > bestScore){
+                        bestScore = currentScore;
+                        bestColumn = columnsInOrder[i];
+                    }
 
-                if (currentScore > bestScore){
-                    bestScore = currentScore;
-                    bestColumn = columnsInOrder[i];
                 }
-
             }
+
+            depth++;
+            
         }
 
         return bestColumn;
@@ -478,7 +482,6 @@ public class SouthPasadena implements CXPlayer {
 
             }
         }
-
 
         return score;
 
