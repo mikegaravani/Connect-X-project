@@ -17,10 +17,10 @@ public class SouthPasadena implements CXPlayer {
 
     // CONSTANTS
 
-    // Constant used in the row heuristic score evaluation
+    // Constant used in the column heuristic score evaluation
     public static final int MULTIPLIER_1 = 1;
 
-    // Constant used in the column heuristic score evaluation
+    // Constant used in the row heuristic score evaluation
     public static final int MULTIPLIER_2 = 1;
 
     // Constant used in the diagonal heuristic score evaluation
@@ -73,19 +73,9 @@ public class SouthPasadena implements CXPlayer {
 
     }
 
-    /**
-     * Checks if the time to select a column is running out, that is if more than
-     * 99 percent of it has passed.
-     * 
-     * @return Boolean
+    /*
+     * Select the best column
      */
-    private boolean isTimeRunningOut(){
-
-        long elapsedTimeMillis = System.currentTimeMillis() - startingTime;
-        return (elapsedTimeMillis >= 0.98 * timeConstraintMillis);
-
-    }
-
     public int selectColumn(CXBoard B){
 
         startingTime = System.currentTimeMillis();
@@ -216,6 +206,19 @@ public class SouthPasadena implements CXPlayer {
     }
 
     /**
+     * Checks if the time to select a column is running out, that is if more than
+     * 99 percent of it has passed.
+     * 
+     * @return Boolean
+     */
+    private boolean isTimeRunningOut(){
+
+        long elapsedTimeMillis = System.currentTimeMillis() - startingTime;
+        return (elapsedTimeMillis >= 0.98 * timeConstraintMillis);
+
+    }
+
+    /**
      * Orders the columns based on how far from the center of the board they are.
      * Columns will then be called in this order by the Minimax algorithms.
      * This is because tokens in columns near the center of the board tend to have more opportunities.
@@ -257,6 +260,9 @@ public class SouthPasadena implements CXPlayer {
 
     }
 
+    /**
+     * Initializes the Zobrist Table with random values
+     */
     private void initZobrist(){
         zobristTable = new long[rowsNumber][columnsNumber][3];
         for (int i=0; i<rowsNumber; i++){
@@ -268,6 +274,14 @@ public class SouthPasadena implements CXPlayer {
         }
     }
 
+
+    /**
+     * Computes the hash key according to the board's current state, by XORing the random values based on
+     * the cell states across the entire board.
+     * 
+     * @param B
+     * @return The hash key that uniquely represents the board's current state
+     */
     public long computeZobristHash(CXBoard B) {
 
         long hash = 0L;
@@ -348,52 +362,6 @@ public class SouthPasadena implements CXPlayer {
         // Initializing the heuristic score
         int score = 0;
 
-        // HORIZONTAL SCORE
-        for (int i=0; i<rowsNumber; i++){
-
-            int iter = 0;
-            int myTotalCells = 0;
-            int yourTotalCells = 0;
-
-            // Checking if we can skip the current row
-            int nonEmptyCells = 0;
-            for (int k=0; k<columnsNumber; k++){
-                if (B.cellState(i, k) != CXCellState.FREE){
-                    nonEmptyCells++;
-                }
-            }
-            if (nonEmptyCells == 0){
-                // If the row we're considering is completely empty, we can skip it.
-                continue;
-            }
-            else if (nonEmptyCells == columnsNumber){
-                // If the row we're considering is completely filled, it won't affect the row score and we can break out of the loop.
-                // This is because we can assume that all the rows below the current one are also full. 
-                break;
-            }
-
-            while (iter + tokensToConnect <= columnsNumber){
-                for (int j=0; j<tokensToConnect; j++){
-                    if (B.cellState(i, j+iter) == myCell){
-                        myTotalCells++;
-                    }
-                    else if (B.cellState(i, j+iter) == yourCell){
-                        yourTotalCells++;
-                    }
-                    // Nothing happens if the cell is empty
-                }
-                if (myTotalCells > 0 && yourTotalCells == 0){
-                    score = score + ((int)Math.pow(myTotalCells, 2)) * MULTIPLIER_1;
-                }
-                else if (myTotalCells == 0 && yourTotalCells > 0){
-                    score = score - ((int)Math.pow(yourTotalCells, 2)) * MULTIPLIER_1;
-                }
-                myTotalCells = 0;
-                yourTotalCells = 0;
-                iter++;
-            }
-        }
-
         // VERTICAL SCORE
         for (int j=0; j<B.getAvailableColumns().length; j++){
 
@@ -461,12 +429,60 @@ public class SouthPasadena implements CXPlayer {
             }
 
             if (count > 0 && isMyColumn && (emptyCellsAbove + count >= tokensToConnect)){
-                score = score + (int)Math.pow(count, 2) * MULTIPLIER_2;
+                score = score + (int)Math.pow(count, 2) * MULTIPLIER_1;
             }
             else if (count > 0 && !isMyColumn && (emptyCellsAbove + count >= tokensToConnect)){
-                score = score - (int)Math.pow(count, 2) * MULTIPLIER_2;
+                score = score - (int)Math.pow(count, 2) * MULTIPLIER_1;
             }
 
+        }
+
+        // HORIZONTAL SCORE
+        for (int i=0; i<rowsNumber; i++){
+
+            int iter = 0;
+            int myTotalCells = 0;
+            int yourTotalCells = 0;
+
+            // Checking if we can skip the current row
+            int nonEmptyCells = 0;
+            for (int k=0; k<columnsNumber; k++){
+                if (B.cellState(i, k) != CXCellState.FREE){
+                    nonEmptyCells++;
+                }
+            }
+            if (nonEmptyCells == 0){
+                // If the row we're considering is completely empty, we can skip it.
+                continue;
+            }
+            else if (nonEmptyCells == columnsNumber){
+                // If the row we're considering is completely filled, it won't affect the row score and we can break out of the loop.
+                // This is because we can assume that all the rows below the current one are also full. 
+                break;
+            }
+
+            while (iter + tokensToConnect <= columnsNumber){
+                for (int j=0; j<tokensToConnect; j++){
+
+                    if (B.cellState(i, j+iter) == myCell){
+                        myTotalCells++;
+                    }
+
+                    else if (B.cellState(i, j+iter) == yourCell){
+                        yourTotalCells++;
+                    }
+                    // Nothing happens if the cell is empty
+                }
+                if (myTotalCells > 0 && yourTotalCells == 0){
+                    score = score + ((int)Math.pow(myTotalCells, 2)) * MULTIPLIER_2;
+                }
+                else if (myTotalCells == 0 && yourTotalCells > 0){
+                    score = score - ((int)Math.pow(yourTotalCells, 2)) * MULTIPLIER_2;
+                }
+                myTotalCells = 0;
+                yourTotalCells = 0;
+                iter++;
+            }
         }
 
         // DIAGONAL SCORE
@@ -545,6 +561,9 @@ public class SouthPasadena implements CXPlayer {
 
     }
 
+    /*
+     * My software player's name
+     */
     public String playerName() {
 		return "SouthPasadena";
 	}
