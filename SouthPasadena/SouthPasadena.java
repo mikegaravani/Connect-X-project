@@ -24,7 +24,7 @@ public class SouthPasadena implements CXPlayer {
     public static final int MULTIPLIER_2 = 1;
 
     // Constant used in the diagonal heuristic score evaluation
-    public static final int MULTIPLIER_3 = 1;
+    public static final int MULTIPLIER_3 = 2;
 
     private int rowsNumber;
     private int columnsNumber;
@@ -439,11 +439,7 @@ public class SouthPasadena implements CXPlayer {
 
         // HORIZONTAL SCORE
         for (int i=0; i<rowsNumber; i++){
-
-            int iter = 0;
-            int myTotalCells = 0;
-            int yourTotalCells = 0;
-
+            
             // Checking if we can skip the current row
             int nonEmptyCells = 0;
             for (int k=0; k<columnsNumber; k++){
@@ -461,28 +457,26 @@ public class SouthPasadena implements CXPlayer {
                 break;
             }
 
-            while (iter + tokensToConnect <= columnsNumber){
-                for (int j=0; j<tokensToConnect; j++){
-
-                    if (B.cellState(i, j+iter) == myCell){
-                        myTotalCells++;
+            for(int j=0; j<=columnsNumber-tokensToConnect; j++){
+                int myTokens = 0;
+                int yourTokens = 0;
+                for(int k=0; k<tokensToConnect; k++){
+                    if (B.cellState(i, j+k) == myCell){
+                        myTokens++;
                     }
-
-                    else if (B.cellState(i, j+iter) == yourCell){
-                        yourTotalCells++;
+                    else if (B.cellState(i, j+k) == yourCell){
+                        yourTokens++;
                     }
                     // Nothing happens if the cell is empty
                 }
-                if (myTotalCells > 0 && yourTotalCells == 0){
-                    score = score + ((int)Math.pow(myTotalCells, 2)) * MULTIPLIER_2;
+                if(myTokens > 0 && yourTokens == 0){
+                    score = score + (int)Math.pow(myTokens, 2) * MULTIPLIER_2;
                 }
-                else if (myTotalCells == 0 && yourTotalCells > 0){
-                    score = score - ((int)Math.pow(yourTotalCells, 2)) * MULTIPLIER_2;
+                else if (yourTokens > 0 && myTokens == 0){
+                    score = score - (int)Math.pow(yourTokens, 2) * MULTIPLIER_2;
                 }
-                myTotalCells = 0;
-                yourTotalCells = 0;
-                iter++;
             }
+
         }
 
         // DIAGONAL SCORE
