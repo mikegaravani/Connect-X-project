@@ -1,5 +1,6 @@
 package connectx.SouthPasadena;
 
+import java.util.HashMap;
 import java.util.Random;
 
 import connectx.CXBoard;
@@ -39,15 +40,21 @@ public class SouthPasadena implements CXPlayer {
     private long startingTime;
     private long timeConstraintMillis;
 
+    // Transposition tables
+    private long[][][] zobristTable;
+    private HashMap<Long, TranspositionEntry> transpositionTable;
+
 
     /* Default empty constructor */
     public SouthPasadena() {
 	}
 
+    /*
+     * Initialize the Player
+     */    
     public void initPlayer(int M, int N, int X, boolean first, int timeout_in_secs){
 
-        // INITIALIZE PLAYER
-        rand = new Random(System.currentTimeMillis());
+        rand = new Random();
 
         rowsNumber = M;
         columnsNumber = N;
@@ -60,6 +67,10 @@ public class SouthPasadena implements CXPlayer {
         yourCell = first ? CXCellState.P2 : CXCellState.P1;
 
         timeConstraintMillis = timeout_in_secs * 1000;
+
+        initZobrist();
+        transpositionTable = new HashMap<>();
+
     }
 
     /**
@@ -134,7 +145,7 @@ public class SouthPasadena implements CXPlayer {
             }
 
             depth++;
-            
+
         }
 
         return bestColumn;
@@ -151,8 +162,18 @@ public class SouthPasadena implements CXPlayer {
      */
     private int alphaBetaMinimax(CXBoard B, int alpha, int beta, int depth, boolean isMaximizing){
 
+        long hash = computeZobristHash(B);
+        // Check if the board state is in the transposition table
+        TranspositionEntry entry = transpositionTable.get(hash);
+        if (entry != null && entry.depth >= depth) {
+            // Use the stored evaluation
+            return entry.evaluation;
+        }
+
         if (depth == 0 || B.gameState() != CXGameState.OPEN || isTimeRunningOut()){
-            return heuristicScore(B);
+            int eval = heuristicScore(B);
+            transpositionTable.put(hash, new TranspositionEntry(hash, eval, depth)); // Store in transposition table
+            return eval;
         }
 
         if (isMaximizing){
@@ -165,7 +186,7 @@ public class SouthPasadena implements CXPlayer {
                     value = Math.max(value, alphaBetaMinimax(B, alpha, beta, depth-1, false));
                     B.unmarkColumn();
                     if (value > beta){
-                        // break BETA !!
+                        // break β !!
                         break;
                     }
                     alpha = Math.max(alpha, value);
@@ -184,7 +205,7 @@ public class SouthPasadena implements CXPlayer {
                     value = Math.min(value, alphaBetaMinimax(B, alpha, beta, depth-1, true));
                     B.unmarkColumn();
                     if (value < alpha){
-                        // break ALPHA !!
+                        // break α !!
                         break;
                     }
                     beta = Math.min(beta, value);
@@ -235,6 +256,43 @@ public class SouthPasadena implements CXPlayer {
         return columnPriorities;
 
     }
+
+    private void initZobrist(){
+        zobristTable = new long[rowsNumber][columnsNumber][3];
+        for (int i=0; i<rowsNumber; i++){
+            for (int j=0; j<columnsNumber; j++){
+                for (int k=0; k<3; k++){
+                    zobristTable[i][j][k] = rand.nextLong();
+                }
+            }
+        }
+    }
+
+    public long computeZobristHash(CXBoard B) {
+
+        long hash = 0L;
+        for (int i = 0; i < rowsNumber; i++) {
+            for (int j = 0; j < columnsNumber; j++) {
+
+                int state;
+                if (B.cellState(i, j) == CXCellState.P1){
+                    state = 0;
+                }
+                else if (B.cellState(i, j) == CXCellState.P2){
+                    state = 1;
+                }
+                else{
+                    state = 2;
+                }
+                
+                hash ^= zobristTable[i][j][state];
+
+            }
+        }
+        
+        return hash;
+    }
+
 
 
 
