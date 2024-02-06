@@ -6,11 +6,13 @@ SouthPasadena is a software player for Connect X , designed to select the best m
 ## Play a game of Connect X against SouthPasadena!
 
 1. Make sure to have the Java Development Kit (JDK) installed on your computer.
-2. Once you're in the Connect-X-project directory, run:
+2. Once you're in the src directory, run:
+
 	```
 	javac -cp ".." *.java */*.java
 	```
 3. And finally, to launch the game, run:
+
 	```
 	java -cp ".." connectx.CXGame M N X connectx.SouthPasadena.SouthPasadena
 	```
